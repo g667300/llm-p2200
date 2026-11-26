@@ -34,7 +34,7 @@ hf download unsloth/gemma-4-26B-A4B-it-qat-GGUF gemma-4-26B-A4B-it-qat-UD-Q4_K_X
 ```
 Set the preset name as `"model"` in a request to load it on demand (only one model is loaded at a time).
 
-| Use | Preset | Context | Approx. generation speed |
+| Use | Preset | Context | Approx. generation speed (short context) |
 |---|---|---|---|
 | hermes | `qwen3.6-35b-64k` / `gemma-4-26B-A4B-64k` | 64k | ~17 / ~15-17 t/s |
 | claude code | `qwen3.6-35b-200k` | 200k | ~14 t/s |
@@ -43,7 +43,28 @@ Set the preset name as `"model"` in a request to load it on demand (only one mod
 200k requires `ctv=q4_0` and leaves only 600MiB for the GPU cache. Qwen 200k uses 5.04/5.05GB of VRAM, so there is almost no headroom.
 If startup fails for lack of VRAM (HTTP 500 / `cudaMalloc failed` in the log), lower `moe-cache-mib` in steps of 200.
 
+Generation speed drops as the context fills. Measured with real prompts (one run each; `pp` = prompt processing, `tg` = generation, t/s):
+
+| Preset | 8k | 16k | 32k | 60k | 64k | 128k |
+|---|---|---|---|---|---|---|
+| `qwen3.6-35b-64k` | 251 / 15.7 | 227 / 14.7 | 191 / 11.9 | 146 / 9.7 | - | - |
+| `gemma-4-26B-A4B-64k` | 231 / 12.6 | 201 / 12.3 | 155 / 11.1 | 110 / 9.4 | - | - |
+| `qwen3.6-35b-200k` | - | 199 / 11.4 | - | - | 139 / 8.0 | 92 / 5.3 |
+| `gemma-4-26B-A4B-200k` | - | 194 / 8.2 | - | - | 104 / 6.8 | 64 / 5.3 |
+
+(each cell is `pp / tg`). A 128k prompt takes about 23 min (Qwen) / 34 min (gemma) to process. 190k was not measured.
+
 Smoke test: `./bench.py <preset>` (measures short-prompt generation speed and a ~2.7k-token long prompt).
+
+## RAM estimate
+Weights are mmapped, so RAM use is bounded by the file size (the GPU-resident part is copied to VRAM and its pages can be dropped). KV and compute buffers are on the GPU (`ngl = 99`). Upper bound per preset family:
+
+| Model | GGUF | mmproj (CPU) | prompt cache (`cache-ram`) | Upper bound |
+|---|---|---|---|---|
+| Qwen3.6-35B-A3B | 16.5GiB | 0.84GiB | 3.0GiB | ~20.4GiB |
+| gemma-4-26B-A4B | 13.3GiB | 1.1GiB | 3.0GiB | ~17.4GiB |
+
+Measured with Qwen 200k loaded: container 5.9GiB (`docker stats`), host `available` 27.7GiB of 31.4GiB. This is an upper-bound estimate; the container limit (20g) counts page cache, which is reclaimable.
 
 ## Files
 `models.ini` presets / `endpoint.sh` control script / `docker-compose.yml`, `Dockerfile`, `supervisor.sh`, `healthcheck-slots.sh` container definition / `bench.py` smoke test
