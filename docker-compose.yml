@@ -1,0 +1,46 @@
+# llama.cpp inference endpoint for the Quadro P2200 (5GB).
+# Router mode: with --models-preset and no -m, models are loaded/unloaded on demand
+# according to the request's "model" (only one fits in VRAM at a time). Defined in models.ini.
+name: llm-p2200
+
+services:
+  llama-server:
+    build:
+      context: .
+    image: llm-p2200:local
+    container_name: llm-p2200
+    environment:
+      - WATCH_POLL_SECONDS=30     # monitoring interval
+      - WATCH_START_PERIOD=120    # grace period right after startup (model loading)
+      - SLOT_STALL_SECONDS=180    # stall-detection threshold
+    volumes:
+      - ./models:/models:ro
+      - ./models.ini:/models.ini:ro
+    command: >
+      --models-preset /models.ini
+      --models-max 1
+      ${LLAMA_API_KEY_ARGS?LLAMA_CPP_API_KEY not set: set it in .env, or run 'endpoint.sh start --no-api-key'}
+      --host 0.0.0.0
+      --port 8080
+    ports:
+      # LLAMA_BIND is set in .env (default: loopback only). Use 0.0.0.0 or a specific IP to expose on the LAN.
+      - "${LLAMA_BIND:-127.0.0.1}:${LLAMA_PORT:-8081}:8080"
+    healthcheck:
+      test: ["CMD", "sh", "/healthcheck-slots.sh"]
+      interval: 30s
+      timeout: 15s
+      retries: 3
+      start_period: 120s
+    deploy:
+      resources:
+        limits:
+          # Experts (~13GB) are kept in RAM (-cmoe); if the mmapped pages do not fit
+          # under the limit, the server thrashes. 20g includes --cache-ram (3072MiB).
+          memory: 20g
+        reservations:
+          memory: 2g
+          devices:
+            - driver: nvidia
+              device_ids: ["0"]
+              capabilities: [gpu]
+    restart: unless-stopped
