@@ -14,9 +14,15 @@ Put these under `./models` (the model directory, e.g. a symlink to `~/models`):
 
 | File | Source (Hugging Face) |
 |---|---|
-| `qwen3.6-35b/Qwen3.6-35B-A3B-UD-IQ4_XS.gguf` | unsloth/Qwen3.6-35B-A3B-GGUF |
-| `gemma-4-26B-A4B/gemma-4-26B-A4B-it-qat-UD-Q4_K_XL.gguf` | unsloth/gemma-4-26B-A4B-it-qat-GGUF |
+| `qwen3.6-35b/Qwen3.6-35B-A3B-UD-IQ4_XS.gguf` | [unsloth/Qwen3.6-35B-A3B-GGUF](https://huggingface.co/unsloth/Qwen3.6-35B-A3B-GGUF) |
+| `gemma-4-26B-A4B/gemma-4-26B-A4B-it-qat-UD-Q4_K_XL.gguf` | [unsloth/gemma-4-26B-A4B-it-qat-GGUF](https://huggingface.co/unsloth/gemma-4-26B-A4B-it-qat-GGUF) |
 | `gemma-4-26B-A4B/mmproj-F16.gguf` | same as above |
+
+Download example (the `hf` CLI comes from `pip install -U huggingface_hub`):
+```
+hf download unsloth/Qwen3.6-35B-A3B-GGUF Qwen3.6-35B-A3B-UD-IQ4_XS.gguf --local-dir models/qwen3.6-35b
+hf download unsloth/gemma-4-26B-A4B-it-qat-GGUF gemma-4-26B-A4B-it-qat-UD-Q4_K_XL.gguf mmproj-F16.gguf --local-dir models/gemma-4-26B-A4B
+```
 
 ## Usage
 ```
